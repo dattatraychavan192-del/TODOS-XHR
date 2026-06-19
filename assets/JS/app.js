@@ -16,7 +16,27 @@ let baseURL = "https://jsonplaceholder.typicode.com";
 
 let userArr = [];
 
+function updateSrNo() {
+  let rows = document.querySelectorAll("#stdContainer tbody tr");
+
+  rows.forEach((row, index) => {
+    row.cells[0].innerText = rows.length - index;
+  });
+}
+
+function snackbar(msg, icon) {
+  swal.fire({
+    title: msg,
+    icon: icon,
+    timer: 2000,
+  });
+}
+
+const spinner = document.getElementById("spinner");
+
 function fetchUser(ele) {
+  spinner.classList.remove("d-none");
+
   let xhr = new XMLHttpRequest();
 
   let postURL = `${baseURL}/users`;
@@ -29,6 +49,7 @@ function fetchUser(ele) {
       cl(userArr);
 
       creatCard(userArr.reverse());
+      spinner.classList.add("d-none");
     }
   };
 }
@@ -60,6 +81,8 @@ function creatCard(ele) {
 function onSubmit(ele) {
   ele.preventDefault();
 
+  spinner.classList.remove("d-none");
+
   let newObj = {
     name: name.value,
     username: username.value,
@@ -84,7 +107,7 @@ function onSubmit(ele) {
               <td>${newObj.name}</td>
               <td>${newObj.username}</td>
               <td>${newObj.email}</td>
-              <td>${newObj.address.city}</td>
+              <td>${newObj.address}</td>
               <td>${newObj.phone}</td>
               <td><i class="fa-solid fa-2x  text-primary fa-pen-to-square" onclick = "onedit(this)"></i></td>
               <td><i class="fa-solid fa-2x text-danger fa-trash " onclick = "ondelete(this)"></i></td>
@@ -92,11 +115,16 @@ function onSubmit(ele) {
 
       stdContainer.prepend(tr);
       userForm.reset();
+      spinner.classList.add("d-none");
+
+      snackbar("New user add successfully.", "success");
     }
   };
 }
 
 function onedit(ele) {
+  spinner.classList.remove("d-none");
+
   let editId = ele.closest("tr").id;
   localStorage.setItem("editId", editId);
 
@@ -111,16 +139,27 @@ function onedit(ele) {
       name.value = editObj.name;
       username.value = editObj.username;
       email.value = editObj.email;
-      address.value = editObj.address;
+      address.value = editObj.address.city;
       phone.value = editObj.phone;
 
       editBtn.classList.add("d-none");
       updateBtn.classList.remove("d-none");
+
+      spinner.classList.add("d-none");
+
+      userForm.classList.remove("d-none");
+
+      userForm.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
     }
   };
 }
 
 function updateUser(ele) {
+  spinner.classList.remove("d-none");
+
   let updId = localStorage.getItem("editId");
 
   let updObj = {
@@ -138,7 +177,7 @@ function updateUser(ele) {
   xhr.onload = function () {
     if (xhr.status >= 200 && xhr.status <= 299) {
       let tr = document.getElementById(updId);
-
+      let srNo = tr.cells[0].innerText;
       tr.innerHTML = `
       
        <td>${userArr.length}</td>
@@ -151,24 +190,54 @@ function updateUser(ele) {
               <td><i class="fa-solid fa-2x text-danger fa-trash "onclick = "ondelete(this) "></i></td>
       
       `;
+
+      updateSrNo();
+
+      userForm.reset();
       editBtn.classList.remove("d-none");
       updateBtn.classList.add("d-none");
+      spinner.classList.add("d-none");
+
+      tr.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+
+      snackbar("User information update successfully.", "success");
     }
   };
 }
 
 function ondelete(ele) {
-  let deletId = ele.closest("tr").id;
-  let deletURL = `${baseURL}/users/${deletId}`;
+  spinner.classList.remove("d-none");
 
-  let xhr = new XMLHttpRequest();
-  xhr.open("DELETE", deletURL);
-  xhr.send(null);
-  xhr.onload = function () {
-    if (xhr.status >= 200 && xhr.status <= 299) {
-      ele.closest("tr").remove();
-    }
-  };
+  Swal.fire({
+    title: "Are you sure?",
+    text: "You wont to delete it",
+    icon: "warning",
+    showCancelButton: true,
+    confirmButtonColor: "#3085d6",
+    cancelButtonColor: "#d33",
+    confirmButtonText: "Yes, delete it!",
+  }).then((result) => {
+    let deletId = ele.closest("tr").id;
+    let deletURL = `${baseURL}/users/${deletId}`;
+
+    let xhr = new XMLHttpRequest();
+    xhr.open("DELETE", deletURL);
+    xhr.send(null);
+    xhr.onload = function () {
+      if (xhr.status >= 200 && xhr.status <= 299) {
+        userArr = userArr.filter((user) => user.id != deletId);
+        ele.closest("tr").remove();
+
+        updateSrNo();
+        spinner.classList.add("d-none");
+
+        snackbar("User delete successfully.", "success");
+      }
+    };
+  });
 }
 
 userForm.addEventListener("submit", onSubmit);
